@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="uk" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Система управління бронюванням студії" />
+    
+    <title>Studio Admin</title>
+    
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    
+    <!-- Theme Color for Mobile -->
+    <meta name="theme-color" content="#09090b" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    
+    <style>
+      /* Prevent pull-to-refresh on mobile */
+      body {
+        overscroll-behavior-y: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      /* Hide scrollbar but keep functionality */
+      ::-webkit-scrollbar {
+        width: 0px;
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body class="bg-black text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
