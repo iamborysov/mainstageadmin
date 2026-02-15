@@ -110,3 +110,9 @@ export const updateEquipmentPrices = async (equipment: Equipment[]): Promise<voi
     equipment,
   });
 };
+
+// Завантаження актуальних цін на обладнання (тільки обладнання)
+export const loadCurrentPrices = async (): Promise<Equipment[]> => {
+  const settings = await loadSettings();
+  return settings.equipment || EQUIPMENT;
+};

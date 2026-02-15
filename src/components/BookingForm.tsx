@@ -12,9 +12,10 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PAYMENT_TYPES, ROOMS, EQUIPMENT } from '@/types';
-import type { Booking, PaymentType, RoomBooking, MixedPayment } from '@/types';
-import { Clock, Users, Wallet, Package, Home, Calculator } from 'lucide-react';
+import type { Booking, PaymentType, RoomBooking, MixedPayment, Equipment } from '@/types';
+import { Clock, Users, Wallet, Package, Home, Calculator, Loader2 } from 'lucide-react';
 import { isWeekend, parseISO } from 'date-fns';
+import { loadCurrentPrices } from '@/services/settings';
 
 interface BookingFormProps {
   onSubmit: (booking: Omit<Booking, 'id' | 'createdAt'>) => void;
@@ -65,6 +66,18 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
     initialData?.mixedPayment || { cashAmount: 0, cardAmount: 0 }
   );
   const [notes, setNotes] = useState(initialData?.notes || '');
+  
+  // Стан для обладнання з актуальними цінами
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>(EQUIPMENT);
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+
+  // Завантаження актуальних цін при монтуванні
+  useEffect(() => {
+    loadCurrentPrices().then(eq => {
+      setEquipmentList(eq);
+      setIsLoadingPrices(false);
+    });
+  }, []);
 
   // Оновлюємо дані коли initialData змінюється
   useEffect(() => {
@@ -344,21 +357,28 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Package className="w-4 h-4" />
-              Додаткове обладнання (100 грн/год за кожне)
+              Додаткове обладнання
             </Label>
             <div className="space-y-2 p-3 border rounded-lg">
-              {EQUIPMENT.map((eq) => (
-                <div key={eq.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={eq.id}
-                    checked={selectedEquipmentIds.includes(eq.id)}
-                    onCheckedChange={() => handleEquipmentToggle(eq.id)}
-                  />
-                  <Label htmlFor={eq.id} className="text-sm cursor-pointer">
-                    {eq.name} ({eq.pricePerHour} грн/год)
-                  </Label>
+              {isLoadingPrices ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Завантаження цін...
                 </div>
-              ))}
+              ) : (
+                equipmentList.map((eq) => (
+                  <div key={eq.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={eq.id}
+                      checked={selectedEquipmentIds.includes(eq.id)}
+                      onCheckedChange={() => handleEquipmentToggle(eq.id)}
+                    />
+                    <Label htmlFor={eq.id} className="text-sm cursor-pointer">
+                      {eq.name} ({eq.pricePerHour} грн/год)
+                    </Label>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
