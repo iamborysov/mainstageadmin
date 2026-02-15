@@ -46,7 +46,7 @@ interface ReportsViewProps {
   isOwner?: boolean;
   adminEmail?: string;
   onEditBooking?: (booking: ReportEntry) => void;
-  onDeleteBooking?: (bookingId: string) => void;
+  onDeleteBooking?: (reportId: string, bookingId?: string) => void;
 }
 
 export function ReportsView({ isOwner = false, adminEmail, onEditBooking, onDeleteBooking }: ReportsViewProps) {
@@ -774,7 +774,7 @@ export function ReportsView({ isOwner = false, adminEmail, onEditBooking, onDele
                                 size="sm"
                                 onClick={() => {
                                   if (confirm('Видалити цей запис зі звіту?')) {
-                                    onDeleteBooking(booking.id);
+                                    onDeleteBooking(booking.id, booking.bookingId);
                                   }
                                 }}
                                 className="h-8 w-8 p-0 text-red-400 hover:text-red-300"

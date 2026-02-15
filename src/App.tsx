@@ -308,12 +308,11 @@ function App() {
                   
                   toast.info('Редагування завантажено в форму календаря');
                 }}
-                onDeleteBooking={async (reportId) => {
+                onDeleteBooking={async (reportId, bookingId) => {
                   try {
-                    // Видаляємо з колекції reports
-                    const { deleteDoc, doc } = await import('firebase/firestore');
-                    const { db } = await import('@/services/firebase');
-                    await deleteDoc(doc(db, 'reports', reportId));
+                    // Використовуємо сервіс для видалення - він видалить з reports і оновить bookings
+                    const { removeFromReport } = await import('@/services/reports');
+                    await removeFromReport(reportId, bookingId);
                     
                     toast.success('Запис видалено зі звіту');
                   } catch (error: any) {
