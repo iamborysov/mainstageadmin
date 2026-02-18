@@ -82,6 +82,38 @@ class GoogleCalendarService {
     });
   }
 
+  // Автоматичне оновлення токена (без popup, якщо можливо)
+  async refreshToken(): Promise<boolean> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    return new Promise((resolve) => {
+      if (!this.tokenClient) {
+        resolve(false);
+        return;
+      }
+
+      this.tokenClient.callback = async (tokenResponse: any) => {
+        if (tokenResponse.access_token) {
+          this.accessToken = tokenResponse.access_token;
+          await this.loadUserInfo();
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      };
+
+      // Спроба отримати токен без prompt (без popup якщо сесія Google активна)
+      try {
+        this.tokenClient.requestAccessToken({ prompt: '' });
+      } catch {
+        // Якщо не вдалось без prompt, пробуємо звичайний запит
+        this.tokenClient.requestAccessToken();
+      }
+    });
+  }
+
   // Вихід
   signOut(): void {
     this.accessToken = null;
@@ -184,7 +216,7 @@ class GoogleCalendarService {
       orderBy: 'startTime',
     });
 
-    const response = await fetch(
+    let response = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
       {
         headers: {
@@ -194,9 +226,23 @@ class GoogleCalendarService {
     );
 
     if (response.status === 401) {
-      // Токен закінчився - очищаємо сесію
-      this.signOut();
-      throw new Error('Token expired');
+      // Токен закінчився - пробуємо оновити автоматично
+      const refreshed = await this.refreshToken();
+      if (refreshed) {
+        // Повторюємо запит з новим токеном
+        response = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+          {
+            headers: {
+              Authorization: `Bearer ${this.accessToken}`,
+            },
+          }
+        );
+      } else {
+        // Не вдалось оновити - очищаємо сесію
+        this.signOut();
+        throw new Error('Token expired');
+      }
     }
 
     if (!response.ok) {
