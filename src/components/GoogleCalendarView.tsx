@@ -101,8 +101,14 @@ export function GoogleCalendarView({
 
       setEvents(allEvents);
     } catch (error) {
-      console.error('Error fetching events:', error);
-      toast.error('Помилка завантаження подій: ' + (error as Error).message);
+      const errorMessage = (error as Error).message;
+      if (errorMessage === 'Token expired') {
+        toast.error('Сесія Google Calendar закінчилася. Будь ласка, підключіть Google знову.');
+        setEvents([]); // Очищаємо події
+      } else {
+        console.error('Error fetching events:', error);
+        toast.error('Помилка завантаження подій: ' + errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

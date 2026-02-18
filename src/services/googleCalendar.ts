@@ -193,6 +193,12 @@ class GoogleCalendarService {
       }
     );
 
+    if (response.status === 401) {
+      // Токен закінчився - очищаємо сесію
+      this.signOut();
+      throw new Error('Token expired');
+    }
+
     if (!response.ok) {
       throw new Error('Failed to fetch events');
     }
