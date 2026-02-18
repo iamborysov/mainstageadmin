@@ -127,8 +127,9 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
     });
 
     // Ціна за обладнання (кожен інструмент зі своїми годинами)
+    // Використовуємо equipmentList з актуальними цінами з налаштувань
     const equipmentPrice = equipmentBookings.reduce((sum, eqBooking) => {
-      const eq = EQUIPMENT.find(e => e.id === eqBooking.equipmentId);
+      const eq = equipmentList.find(e => e.id === eqBooking.equipmentId);
       return sum + (eq ? eq.pricePerHour * eqBooking.hours : 0);
     }, 0);
 
