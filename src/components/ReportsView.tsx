@@ -69,8 +69,6 @@ export function ReportsView({ isOwner = false, adminEmail, onEditBooking, onDele
     return allReports.filter(r => r.createdBy === adminEmail);
   }, [allReports, isOwner, adminEmail]);
   
-  console.log('ReportsView filtered reports:', reports);
-  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRoom, setFilterRoom] = useState<string>('all');
   const [filterPaymentType, setFilterPaymentType] = useState<string>('all');
@@ -103,7 +101,6 @@ export function ReportsView({ isOwner = false, adminEmail, onEditBooking, onDele
   };
 
   const filteredReports = useMemo(() => {
-    console.log('Filtering reports:', reports, 'for month:', filterMonth);
     const filtered = reports.filter((booking) => {
       // Пошук за назвою гурту
       const matchesSearch = booking.bandName
@@ -130,26 +127,24 @@ export function ReportsView({ isOwner = false, adminEmail, onEditBooking, onDele
           start: monthStart,
           end: monthEnd,
         });
-      } catch (e) {
-        console.error('Error parsing date for booking:', booking, e);
+      } catch {
         matchesMonth = false;
       }
 
       return matchesSearch && matchesRoom && matchesPaymentType && matchesMonth;
     });
     
-    // Сортування: спочатку по даті (від новіших до старіших), 
+    // Сортування: спочатку по даті (від новіших до старіших),
     // потім по часу додавання (від новіших до старіших)
     const sorted = filtered.sort((a, b) => {
       // Спочатку порівнюємо по даті
       const dateCompare = b.date.localeCompare(a.date);
       if (dateCompare !== 0) return dateCompare;
-      
+
       // Якщо дати однакові - порівнюємо по createdAt
       return b.createdAt.localeCompare(a.createdAt);
     });
-    
-    console.log('Filtered and sorted reports:', sorted);
+
     return sorted;
   }, [reports, searchTerm, filterRoom, filterPaymentType, filterMonth]);
 
