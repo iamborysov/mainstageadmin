@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -130,35 +130,49 @@ export function GoogleCalendarView({
   const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // Отримати події для дня
-  const getEventsForDay = (day: Date) => {
-    return events.filter((event) => {
+  // Мемоізація подій за дні для місячного виду
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, GoogleCalendarEvent[]>();
+    events.forEach((event) => {
       const eventStart = event.start.dateTime || event.start.date;
-      if (!eventStart) return false;
+      if (!eventStart) return;
       const eventDate = parseISO(eventStart);
-      return (
-        eventDate.getDate() === day.getDate() &&
-        eventDate.getMonth() === day.getMonth() &&
-        eventDate.getFullYear() === day.getFullYear()
-      );
+      const key = format(eventDate, 'yyyy-MM-dd');
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(event);
     });
-  };
+    return map;
+  }, [events]);
 
-  // Отримати події для години
-  const getEventsForHour = (day: Date, hour: number) => {
-    return events.filter((event) => {
+  // Мемоізація подій за день і годину для тижневого виду
+  const eventsByDayHour = useMemo(() => {
+    const map = new Map<string, GoogleCalendarEvent[]>();
+    events.forEach((event) => {
       const eventStart = event.start.dateTime;
-      if (!eventStart) return false;
+      if (!eventStart) return;
       const eventDate = parseISO(eventStart);
-      const eventHour = eventDate.getHours();
-      return (
-        eventDate.getDate() === day.getDate() &&
-        eventDate.getMonth() === day.getMonth() &&
-        eventDate.getFullYear() === day.getFullYear() &&
-        eventHour === hour
-      );
+      const key = `${format(eventDate, 'yyyy-MM-dd')}-${eventDate.getHours()}`;
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(event);
     });
-  };
+    return map;
+  }, [events]);
+
+  // Отримати події для дня (швидкий lookup)
+  const getEventsForDay = useCallback((day: Date) => {
+    const key = format(day, 'yyyy-MM-dd');
+    return eventsByDay.get(key) || [];
+  }, [eventsByDay]);
+
+  // Отримати події для години (швидкий lookup)
+  const getEventsForHour = useCallback((day: Date, hour: number) => {
+    const key = `${format(day, 'yyyy-MM-dd')}-${hour}`;
+    return eventsByDayHour.get(key) || [];
+  }, [eventsByDayHour]);
 
   // Визначити кімнату за calendarId
   const getRoomByCalendarId = (calendarId?: string) => {

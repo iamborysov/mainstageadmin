@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -118,8 +118,8 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
 
   const baseHours = calculateHours();
 
-  // Розрахунок ціни
-  const priceCalculation = (() => {
+  // Розрахунок ціни (мемоізований)
+  const priceCalculation = useMemo(() => {
     // Ціна за кімнати
     let roomPrice = 0;
     selectedRooms.forEach(roomBooking => {
@@ -127,7 +127,6 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
     });
 
     // Ціна за обладнання (кожен інструмент зі своїми годинами)
-    // Використовуємо equipmentList з актуальними цінами з налаштувань
     const equipmentPrice = equipmentBookings.reduce((sum, eqBooking) => {
       const eq = equipmentList.find(e => e.id === eqBooking.equipmentId);
       return sum + (eq ? eq.pricePerHour * eqBooking.hours : 0);
@@ -142,7 +141,7 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
       totalPrice,
       totalHours,
     };
-  })();
+  }, [selectedRooms, equipmentBookings, equipmentList, date, startTime, isResident]);
 
   // Обробка вибору кімнати
   const handleRoomToggle = (roomId: string) => {
