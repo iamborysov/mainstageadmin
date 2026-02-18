@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PAYMENT_TYPES, ROOMS, EQUIPMENT } from '@/types';
-import type { Booking, PaymentType, RoomBooking, MixedPayment, Equipment } from '@/types';
+import type { Booking, PaymentType, RoomBooking, MixedPayment, Equipment, EquipmentBooking } from '@/types';
 import { Clock, Users, Wallet, Package, Home, Calculator, Loader2 } from 'lucide-react';
 import { isWeekend, parseISO } from 'date-fns';
 import { loadCurrentPrices } from '@/services/settings';
@@ -60,7 +60,11 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
   );
   
   const [isResident, setIsResident] = useState(initialData?.isResident || false);
-  const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>(initialData?.equipment || []);
+  // Обладнання з кількістю годин
+  const [equipmentBookings, setEquipmentBookings] = useState<EquipmentBooking[]>(
+    initialData?.equipmentBookings || 
+    (initialData?.equipment || []).map(id => ({ equipmentId: id, hours: initialData?.totalHours || 2 }))
+  );
   const [paymentType, setPaymentType] = useState<PaymentType>(initialData?.paymentType || 'cash');
   const [mixedPayment, setMixedPayment] = useState<MixedPayment>(
     initialData?.mixedPayment || { cashAmount: 0, cardAmount: 0 }
@@ -91,7 +95,10 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
         (initialData.roomId ? [{ roomId: initialData.roomId, hours: initialData.totalHours || 2 }] : [])
       );
       setIsResident(initialData.isResident || false);
-      setSelectedEquipmentIds(initialData.equipment || []);
+      setEquipmentBookings(
+        initialData.equipmentBookings || 
+        (initialData.equipment || []).map(id => ({ equipmentId: id, hours: initialData?.totalHours || 2 }))
+      );
       setPaymentType(initialData.paymentType || 'cash');
       setMixedPayment(initialData.mixedPayment || { cashAmount: 0, cardAmount: 0 });
       setNotes(initialData.notes || '');
@@ -119,12 +126,11 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
       roomPrice += calculateRoomPrice(roomBooking.roomId, roomBooking.hours, date, startTime, isResident);
     });
 
-    // Ціна за обладнання
-    const selectedEquipment = EQUIPMENT.filter(eq => selectedEquipmentIds.includes(eq.id));
-    const equipmentHourlyPrice = selectedEquipment.reduce((sum, eq) => sum + eq.pricePerHour, 0);
-    // Обладнання йде на максимальну кількість годин з вибраних кімнат
-    const maxHours = selectedRooms.length > 0 ? Math.max(...selectedRooms.map(r => r.hours)) : baseHours;
-    const equipmentPrice = equipmentHourlyPrice * maxHours;
+    // Ціна за обладнання (кожен інструмент зі своїми годинами)
+    const equipmentPrice = equipmentBookings.reduce((sum, eqBooking) => {
+      const eq = EQUIPMENT.find(e => e.id === eqBooking.equipmentId);
+      return sum + (eq ? eq.pricePerHour * eqBooking.hours : 0);
+    }, 0);
 
     const totalPrice = roomPrice + equipmentPrice;
     const totalHours = selectedRooms.reduce((sum, r) => sum + r.hours, 0);
@@ -134,7 +140,6 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
       equipmentPrice,
       totalPrice,
       totalHours,
-      maxHours,
     };
   })();
 
@@ -163,12 +168,26 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
 
   // Обладнання
   const handleEquipmentToggle = (equipmentId: string) => {
-    setSelectedEquipmentIds(prev => {
-      if (prev.includes(equipmentId)) {
-        return prev.filter(id => id !== equipmentId);
+    setEquipmentBookings(prev => {
+      const exists = prev.find(eb => eb.equipmentId === equipmentId);
+      if (exists) {
+        return prev.filter(eb => eb.equipmentId !== equipmentId);
       }
-      return [...prev, equipmentId];
+      // Додаємо нове обладнання з типовими годинами (макс з кімнат або baseHours)
+      const defaultHours = selectedRooms.length > 0 
+        ? Math.max(...selectedRooms.map(r => r.hours)) 
+        : baseHours;
+      return [...prev, { equipmentId, hours: defaultHours }];
     });
+  };
+
+  // Зміна годин для обладнання
+  const handleEquipmentHoursChange = (equipmentId: string, hours: number) => {
+    setEquipmentBookings(prev =>
+      prev.map(eb =>
+        eb.equipmentId === equipmentId ? { ...eb, hours: Math.max(1, hours) } : eb
+      )
+    );
   };
 
   // Перевірка чи вихідний
@@ -192,7 +211,9 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
       roomId: primaryRoom.roomId,
       roomBookings: selectedRooms.map(r => ({ roomId: r.roomId, hours: Number(r.hours) })),
       isResident,
-      equipment: selectedEquipmentIds,
+      equipment: equipmentBookings.map(eb => eb.equipmentId),
+      equipmentBookings: equipmentBookings.map(eb => ({ equipmentId: eb.equipmentId, hours: Number(eb.hours) })),
+      equipmentHours: equipmentBookings.reduce((sum, eb) => sum + eb.hours, 0),
       paymentType,
       totalHours: Number(priceCalculation.totalHours),
       totalPrice: Number(priceCalculation.totalPrice),
@@ -215,7 +236,7 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
     // Reset form
     setBandName('');
     setSelectedRooms([]);
-    setSelectedEquipmentIds([]);
+    setEquipmentBookings([]);
     setIsResident(false);
     setMixedPayment({ cashAmount: 0, cardAmount: 0 });
     setNotes('');
@@ -366,18 +387,36 @@ export function BookingForm({ onSubmit, onCancel, initialDate, initialData, isEd
                   Завантаження цін...
                 </div>
               ) : (
-                equipmentList.map((eq) => (
-                  <div key={eq.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={eq.id}
-                      checked={selectedEquipmentIds.includes(eq.id)}
-                      onCheckedChange={() => handleEquipmentToggle(eq.id)}
-                    />
-                    <Label htmlFor={eq.id} className="text-sm cursor-pointer">
-                      {eq.name} ({eq.pricePerHour} грн/год)
-                    </Label>
-                  </div>
-                ))
+                equipmentList.map((eq) => {
+                  const eqBooking = equipmentBookings.find(eb => eb.equipmentId === eq.id);
+                  const isSelected = !!eqBooking;
+                  return (
+                    <div key={eq.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={eq.id}
+                        checked={isSelected}
+                        onCheckedChange={() => handleEquipmentToggle(eq.id)}
+                      />
+                      <Label htmlFor={eq.id} className="text-sm cursor-pointer flex-1">
+                        {eq.name} ({eq.pricePerHour} грн/год)
+                      </Label>
+                      {isSelected && (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-muted-foreground">год:</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={24}
+                            value={eqBooking.hours}
+                            onChange={(e) => handleEquipmentHoursChange(eq.id, parseInt(e.target.value) || 1)}
+                            className="w-16 h-7 text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
