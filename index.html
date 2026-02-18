@@ -14,22 +14,67 @@
     <link rel="preconnect" href="https://accounts.google.com" crossorigin />
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
     
-    <!-- Google Identity Services - load with lower priority -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    
     <!-- Theme Color for Mobile -->
     <meta name="theme-color" content="#09090b" />
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     
-    <!-- Critical CSS inline -->
+    <!-- Critical CSS inline - above the fold content -->
     <style>
-      /* Prevent pull-to-refresh on mobile */
+      /* Critical render blocking styles */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      
+      html {
+        color-scheme: dark;
+      }
+      
       body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #000;
+        color: #fff;
+        min-height: 100vh;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        /* Prevent pull-to-refresh on mobile */
         overscroll-behavior-y: none;
         -webkit-overflow-scrolling: touch;
+      }
+      
+      /* Loading state styles */
+      #root {
+        min-height: 100vh;
+      }
+      
+      /* Initial loading spinner */
+      #root:empty::before {
+        content: '';
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 40px;
+        height: 40px;
+        margin: -20px 0 0 -20px;
+        border: 3px solid rgba(255,255,255,0.1);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      /* Header critical styles */
+      header {
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        background: rgba(9,9,11,0.95);
+        backdrop-filter: blur(10px);
       }
       
       /* Hide scrollbar but keep functionality */
@@ -42,5 +87,9 @@
   <body class="bg-black text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Google Identity Services - load at end of body to not block render -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
   </body>
 </html>

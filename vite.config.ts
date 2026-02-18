@@ -34,6 +34,10 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     // Minimize build (use esbuild which is faster and default in Vite)
     minify: true,
+    // CSS optimization
+    cssMinify: true,
+    // Target modern browsers for smaller bundle
+    target: 'esnext',
   },
   server: {
     allowedHosts: [

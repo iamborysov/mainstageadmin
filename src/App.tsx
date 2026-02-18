@@ -190,7 +190,15 @@ function App() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-16 h-16 flex items-center justify-center">
-                <img src="/logo.png" alt="Studio Logo" className="w-full h-full object-contain rounded-lg" />
+                <img 
+                  src="/logo.png" 
+                  alt="Studio Logo" 
+                  width={64} 
+                  height={64}
+                  fetchPriority="high"
+                  decoding="async"
+                  className="w-full h-full object-contain rounded-lg" 
+                />
               </div>
               <div>
                 <h1 className="text-xl font-bold">Studio Admin</h1>
