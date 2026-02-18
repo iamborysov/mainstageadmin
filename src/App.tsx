@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Toaster, toast } from 'sonner';
 import { BookingForm } from '@/components/BookingForm';
 import { GoogleCalendarView, type CalendarEventData } from '@/components/GoogleCalendarView';
-import { ReportsView } from '@/components/ReportsView';
-import { Settings } from '@/components/Settings';
+
+// Lazy load heavy components
+const ReportsView = lazy(() => import('@/components/ReportsView').then(m => ({ default: m.ReportsView })));
+const Settings = lazy(() => import('@/components/Settings').then(m => ({ default: m.Settings })));
 
 import { GoogleAuthButton } from '@/components/GoogleAuthButton';
 import type { GoogleUser } from '@/services/googleCalendar';
@@ -16,7 +18,7 @@ import { bookingsApi, type FirebaseBooking } from '@/services/firebase';
 import { loadSettings, subscribeToSettings } from '@/services/settings';
 import { addToReport } from '@/services/reports';
 import type { UserRole } from '@/services/userRoles';
-import { CalendarDays, BarChart3, Settings2 } from 'lucide-react';
+import { CalendarDays, BarChart3, Settings2, Loader2 } from 'lucide-react';
 
 import type { User } from 'firebase/auth';
 
@@ -263,70 +265,82 @@ function App() {
           {/* Reports Tab - для всіх адмінів (аналітика) */}
           {isAdmin && (
             <TabsContent value="reports">
-              <ReportsView 
-                isOwner={isOwner} 
-                adminEmail={adminUser?.email || ''}
-                onEditBooking={(reportEntry) => {
-                  // Перераховуємо години на основі часу початку і кінця
-                  const calculateHours = (start: string, end: string) => {
-                    const [sh, sm] = start.split(':').map(Number);
-                    const [eh, em] = end.split(':').map(Number);
-                    const startMin = sh * 60 + sm;
-                    const endMin = eh * 60 + em;
-                    let diff = endMin - startMin;
-                    if (diff < 0) diff += 24 * 60;
-                    return Math.ceil(diff / 60);
-                  };
-                  
-                  const totalHours = reportEntry.totalHours > 0 
-                    ? reportEntry.totalHours 
-                    : calculateHours(reportEntry.startTime, reportEntry.endTime);
-                  
-                  // Конвертуємо ReportEntry в Booking для редагування
-                  const bookingForEdit: Booking = {
-                    id: reportEntry.bookingId || 'temp-edit',
-                    bandName: reportEntry.bandName,
-                    date: reportEntry.date,
-                    startTime: reportEntry.startTime,
-                    endTime: reportEntry.endTime,
-                    roomId: reportEntry.roomId,
-                    isResident: reportEntry.isResident,
-                    equipment: reportEntry.equipment || [],
-                    paymentType: reportEntry.paymentType,
-                    totalHours: totalHours,
-                    equipmentHours: reportEntry.equipmentHours || totalHours,
-                    totalPrice: reportEntry.totalPrice,
-                    notes: reportEntry.notes,
-                    createdAt: reportEntry.createdAt,
-                    source: reportEntry.source as 'telegram' | 'manual',
-                    reportId: reportEntry.id,
-                  };
-                  
-                  setSelectedDate(new Date(reportEntry.date));
-                  setEditingBooking(bookingForEdit);
-                  setActiveTab('calendar');
-                  
-                  toast.info('Редагування завантажено в форму календаря');
-                }}
-                onDeleteBooking={async (reportId, bookingId) => {
-                  try {
-                    // Використовуємо сервіс для видалення - він видалить з reports і оновить bookings
-                    const { removeFromReport } = await import('@/services/reports');
-                    await removeFromReport(reportId, bookingId);
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              }>
+                <ReportsView 
+                  isOwner={isOwner} 
+                  adminEmail={adminUser?.email || ''}
+                  onEditBooking={(reportEntry) => {
+                    // Перераховуємо години на основі часу початку і кінця
+                    const calculateHours = (start: string, end: string) => {
+                      const [sh, sm] = start.split(':').map(Number);
+                      const [eh, em] = end.split(':').map(Number);
+                      const startMin = sh * 60 + sm;
+                      const endMin = eh * 60 + em;
+                      let diff = endMin - startMin;
+                      if (diff < 0) diff += 24 * 60;
+                      return Math.ceil(diff / 60);
+                    };
                     
-                    toast.success('Запис видалено зі звіту');
-                  } catch (error: any) {
-                    toast.error('Помилка видалення: ' + error.message);
-                  }
-                }}
-              />
+                    const totalHours = reportEntry.totalHours > 0 
+                      ? reportEntry.totalHours 
+                      : calculateHours(reportEntry.startTime, reportEntry.endTime);
+                    
+                    // Конвертуємо ReportEntry в Booking для редагування
+                    const bookingForEdit: Booking = {
+                      id: reportEntry.bookingId || 'temp-edit',
+                      bandName: reportEntry.bandName,
+                      date: reportEntry.date,
+                      startTime: reportEntry.startTime,
+                      endTime: reportEntry.endTime,
+                      roomId: reportEntry.roomId,
+                      isResident: reportEntry.isResident,
+                      equipment: reportEntry.equipment || [],
+                      paymentType: reportEntry.paymentType,
+                      totalHours: totalHours,
+                      equipmentHours: reportEntry.equipmentHours || totalHours,
+                      totalPrice: reportEntry.totalPrice,
+                      notes: reportEntry.notes,
+                      createdAt: reportEntry.createdAt,
+                      source: reportEntry.source as 'telegram' | 'manual',
+                      reportId: reportEntry.id,
+                    };
+                    
+                    setSelectedDate(new Date(reportEntry.date));
+                    setEditingBooking(bookingForEdit);
+                    setActiveTab('calendar');
+                    
+                    toast.info('Редагування завантажено в форму календаря');
+                  }}
+                  onDeleteBooking={async (reportId, bookingId) => {
+                    try {
+                      // Використовуємо сервіс для видалення - він видалить з reports і оновить bookings
+                      const { removeFromReport } = await import('@/services/reports');
+                      await removeFromReport(reportId, bookingId);
+                      
+                      toast.success('Запис видалено зі звіту');
+                    } catch (error: any) {
+                      toast.error('Помилка видалення: ' + error.message);
+                    }
+                  }}
+                />
+              </Suspense>
             </TabsContent>
           )}
 
           {/* Settings Tab - Налаштування */}
           {isOwner && (
             <TabsContent value="settings">
-              <Settings isAdmin={isOwner} currentUser={adminUser} />
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              }>
+                <Settings isAdmin={isOwner} currentUser={adminUser} />
+              </Suspense>
             </TabsContent>
           )}
         </Tabs>
