@@ -31,13 +31,21 @@ export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
       try {
         await googleCalendarService.initialize();
         
-        // Потім спроба відновити сесію
+        // Перевіряємо чи сесія вже відновлена (наприклад, App.tsx вже відновив)
+        if (googleCalendarService.isAuthenticated()) {
+          // Просто оновлюємо свій локальний стан, не викликаємо onAuthChange
+          setIsAuthenticated(true);
+          setUser(googleCalendarService.getUser());
+          return;
+        }
+        
+        // Пробуємо відновити сесію з localStorage
         const restored = googleCalendarService.restoreSession();
         if (restored) {
           setIsAuthenticated(true);
           const user = googleCalendarService.getUser();
           setUser(user);
-          // Оповіщаємо батьківський компонент про відновлення сесії!
+          // Оповіщаємо батьківський компонент про відновлення сесії
           onAuthChange?.(true, user);
         }
       } catch (error) {
