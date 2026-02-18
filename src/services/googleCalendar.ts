@@ -112,15 +112,30 @@ class GoogleCalendarService {
           email: data.email,
           picture: data.picture,
         };
-        localStorage.setItem('google_access_token', this.accessToken);
-        localStorage.setItem('google_user', JSON.stringify(this.user));
+      } else {
+        // Якщо не вдалось отримати userinfo, створюємо базового користувача
+        this.user = {
+          id: 'unknown',
+          name: 'Google User',
+          email: 'unknown',
+          picture: '',
+        };
       }
-    } catch (error) {
-      console.error('Error loading user info:', error);
+    } catch {
+      this.user = {
+        id: 'unknown',
+        name: 'Google User',
+        email: 'unknown',
+        picture: '',
+      };
     }
+
+    // Зберігаємо в localStorage
+    localStorage.setItem('google_access_token', this.accessToken);
+    localStorage.setItem('google_user', JSON.stringify(this.user));
   }
 
-  // Відновлення сесії
+  // Відновлення сесії з localStorage
   restoreSession(): boolean {
     const savedToken = localStorage.getItem('google_access_token');
     const savedUser = localStorage.getItem('google_user');
@@ -131,6 +146,25 @@ class GoogleCalendarService {
       return true;
     }
     return false;
+  }
+  
+  // Перевірка чи токен ще валідний (для фонової перевірки)
+  async validateToken(): Promise<boolean> {
+    if (!this.accessToken) return false;
+
+    try {
+      const response = await fetch(
+        'https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + this.accessToken
+      );
+      if (!response.ok) {
+        console.log('Token validation failed, but keeping session');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.log('Token validation error:', error);
+      return false;
+    }
   }
 
   // Отримання подій з календаря

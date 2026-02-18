@@ -34,10 +34,11 @@ export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
         // Потім спроба відновити сесію
         const restored = googleCalendarService.restoreSession();
         if (restored) {
-          console.log('Google session restored');
           setIsAuthenticated(true);
-          setUser(googleCalendarService.getUser());
-          toast.success('Google Calendar підключено автоматично');
+          const user = googleCalendarService.getUser();
+          setUser(user);
+          // Оповіщаємо батьківський компонент про відновлення сесії!
+          onAuthChange?.(true, user);
         }
       } catch (error) {
         console.error('Google init error:', error);
@@ -52,6 +53,7 @@ export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
         clearTimeout(timeoutRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

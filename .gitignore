@@ -52,3 +52,7 @@ coverage
 
 # Firebase (local config with secrets)
 .firebase/hosting.*.cache
+
+# Vercel
+.vercel
+.env*.local

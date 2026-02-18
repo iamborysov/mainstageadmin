@@ -137,8 +137,20 @@ export function ReportsView({ isOwner = false, adminEmail, onEditBooking, onDele
 
       return matchesSearch && matchesRoom && matchesPaymentType && matchesMonth;
     });
-    console.log('Filtered reports:', filtered);
-    return filtered;
+    
+    // Сортування: спочатку по даті (від новіших до старіших), 
+    // потім по часу додавання (від новіших до старіших)
+    const sorted = filtered.sort((a, b) => {
+      // Спочатку порівнюємо по даті
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      
+      // Якщо дати однакові - порівнюємо по createdAt
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+    
+    console.log('Filtered and sorted reports:', sorted);
+    return sorted;
   }, [reports, searchTerm, filterRoom, filterPaymentType, filterMonth]);
 
   // Для звітів беремо всі записи (і з Telegram, і додані адміном вручну)
@@ -642,7 +654,7 @@ export function ReportsView({ isOwner = false, adminEmail, onEditBooking, onDele
                   <TableHead>Гурт</TableHead>
                   <TableHead>Кімната</TableHead>
                   <TableHead>Час</TableHead>
-                  <TableHead>Годин (кімн/обл)</TableHead>
+                  <TableHead>Годин</TableHead>
                   <TableHead>Резидент</TableHead>
                   <TableHead>Обладнання</TableHead>
                   <TableHead>Тип оплати</TableHead>
@@ -711,11 +723,6 @@ export function ReportsView({ isOwner = false, adminEmail, onEditBooking, onDele
                         </TableCell>
                         <TableCell>
                           {Number(booking.totalHours)}
-                          {booking.equipmentHours && Number(booking.equipmentHours) !== Number(booking.totalHours) && (
-                            <span className="text-xs text-muted-foreground block">
-                              обл.: {Number(booking.equipmentHours)} год
-                            </span>
-                          )}
                         </TableCell>
                         <TableCell>
                           {booking.isResident ? (
