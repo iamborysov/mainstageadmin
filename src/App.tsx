@@ -18,7 +18,7 @@ import { bookingsApi, type FirebaseBooking } from '@/services/firebase';
 import { loadSettings, subscribeToSettings } from '@/services/settings';
 import { addToReport } from '@/services/reports';
 import type { UserRole } from '@/services/userRoles';
-import { CalendarDays, BarChart3, Settings2, Loader2 } from 'lucide-react';
+import { CalendarDays, BarChart3, Settings2, Loader2, Lock } from 'lucide-react';
 
 import type { User } from 'firebase/auth';
 
@@ -187,6 +187,37 @@ function App() {
   };
 
   // isAdmin та isOwner вже обчислені вище
+
+  // Екран входу для незалогінених користувачів
+  if (!adminUser) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <Toaster position="top-right" richColors />
+        <div className="text-center space-y-6 p-8 max-w-md">
+          <div className="w-24 h-24 mx-auto flex items-center justify-center bg-zinc-900 rounded-2xl border border-zinc-800">
+            <img 
+              src="/logo.png" 
+              alt="Studio Logo" 
+              width={80} 
+              height={80}
+              className="w-full h-full object-contain rounded-lg p-2" 
+            />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Studio Admin</h1>
+            <p className="text-zinc-400">Система управління бронюванням</p>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-amber-500 bg-amber-500/10 px-4 py-3 rounded-lg border border-amber-500/20">
+            <Lock className="w-5 h-5" />
+            <span className="text-sm">Доступ тільки для авторизованих адміністраторів</span>
+          </div>
+          <div className="pt-4">
+            <AdminAuth onAuthChange={handleAdminAuthChange} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
