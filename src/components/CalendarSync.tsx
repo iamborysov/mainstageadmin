@@ -45,11 +45,16 @@ export function CalendarSync({ isAdmin }: CalendarSyncProps) {
       const monthStart = startOfMonth(now);
       const monthEnd = endOfMonth(now);
 
-      // Отримуємо список календарів
+      // Отримуємо список календарів з env або localStorage
       const savedCalendars = localStorage.getItem('room_calendar_ids');
+      const defaultCalendars = [
+        'primary',
+        import.meta.env.VITE_CALENDAR_MAIN_EMAIL,
+        import.meta.env.VITE_CALENDAR_STANDART_EMAIL,
+      ].filter(Boolean);
       const calendarIds = savedCalendars 
         ? JSON.parse(savedCalendars) 
-        : ['primary', 'mstagestudio@gmail.com', 'tkb2ruijc0qk1daluisq2op9kg@group.calendar.google.com'];
+        : defaultCalendars;
 
       const result = await syncCalendarEvents(
         calendarIds,

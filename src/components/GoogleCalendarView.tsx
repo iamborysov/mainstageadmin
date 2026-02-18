@@ -31,11 +31,11 @@ import {
 import { toast } from 'sonner';
 
 // === КАЛЕНДАРІ СТУДІЇ ===
-// Додайте сюди ID або email ваших календарів
+// Налаштуйте в .env файлі: VITE_CALENDAR_STANDART_EMAIL та VITE_CALENDAR_MAIN_EMAIL
 export const STUDIO_CALENDARS = [
   {
-    id: 'standart', // або email наприклад: 'standart-room@gmail.com'
-    email: 'tkb2ruijc0qk1daluisq2op9kg@group.calendar.google.com', // ЗАМІНІТЬ на реальний email календаря
+    id: 'standart',
+    email: import.meta.env.VITE_CALENDAR_STANDART_EMAIL || '',
     name: 'Standart Room',
     color: 'bg-blue-600',
     borderColor: 'border-blue-400',
@@ -43,7 +43,7 @@ export const STUDIO_CALENDARS = [
   },
   {
     id: 'main',
-    email: 'mstagestudio@gmail.com', // ЗАМІНІТЬ на реальний email календаря  
+    email: import.meta.env.VITE_CALENDAR_MAIN_EMAIL || '',
     name: 'Main Room',
     color: 'bg-red-600',
     borderColor: 'border-red-400',
