@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -9,17 +9,21 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { googleCalendarService } from '@/services/googleCalendar';
 import type { GoogleUser } from '@/services/googleCalendar';
-import { LogOut, User, RefreshCw } from 'lucide-react';
+import { LogOut, User, RefreshCw, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface GoogleAuthButtonProps {
   onAuthChange?: (isAuthenticated: boolean, user: GoogleUser | null) => void;
 }
 
+const AUTH_TIMEOUT = 30000; // 30 секунд таймаут на авторизацію
+
 export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Ініціалізація Google Identity Services спочатку
@@ -41,26 +45,60 @@ export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
     };
     
     initAndRestore();
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
     onAuthChange?.(isAuthenticated, user);
   }, [isAuthenticated, user, onAuthChange]);
 
+  const resetLoadingState = () => {
+    setIsLoading(false);
+    setHasError(true);
+    toast.error('Авторизація не вдалася. Спробуйте ще раз.', {
+      description: 'Можливо, ви закрили вікно авторизації або сталася помилка.',
+    });
+  };
+
   const handleSignIn = async () => {
     setIsLoading(true);
+    setHasError(false);
+    
+    // Встановлюємо таймаут
+    timeoutRef.current = setTimeout(() => {
+      resetLoadingState();
+    }, AUTH_TIMEOUT);
+    
     try {
       const success = await googleCalendarService.signIn();
+      // Скидаємо таймаут якщо успішно
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
       if (success) {
         setIsAuthenticated(true);
         setUser(googleCalendarService.getUser());
+        setHasError(false);
         toast.success('Google акаунт підключено!');
       } else {
-        toast.error('Не вдалося підключити Google акаунт');
+        resetLoadingState();
       }
     } catch (error) {
-      toast.error('Помилка авторизації: ' + (error as Error).message);
+      // Скидаємо таймаут при помилці
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      console.error('Auth error:', error);
+      resetLoadingState();
     } finally {
+      // Гарантуємо що isLoading буде false
       setIsLoading(false);
     }
   };
@@ -97,6 +135,21 @@ export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+    );
+  }
+
+  // Показуємо кнопку з помилкою
+  if (hasError) {
+    return (
+      <Button
+        onClick={handleSignIn}
+        variant="outline"
+        className="gap-2 text-amber-500 border-amber-500/50 hover:bg-amber-500/10"
+      >
+        <AlertCircle className="w-4 h-4" />
+        <span className="hidden sm:inline">Спробувати знову</span>
+        <span className="sm:hidden">Повторити</span>
+      </Button>
     );
   }
 
