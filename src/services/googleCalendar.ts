@@ -73,6 +73,10 @@ class GoogleCalendarService {
           this.accessToken = tokenResponse.access_token;
           await this.loadUserInfo();
           resolve(true);
+        } else if (tokenResponse.error) {
+          // prompt: 'none' повернув помилку - потрібен повний re-auth
+          console.log('Silent refresh failed:', tokenResponse.error);
+          resolve(false);
         } else {
           resolve(false);
         }
@@ -104,13 +108,9 @@ class GoogleCalendarService {
         }
       };
 
-      // Спроба отримати токен без prompt (без popup якщо сесія Google активна)
-      try {
-        this.tokenClient.requestAccessToken({ prompt: '' });
-      } catch {
-        // Якщо не вдалось без prompt, пробуємо звичайний запит
-        this.tokenClient.requestAccessToken();
-      }
+      // Спроба отримати токен без UI (prompt: 'none')
+      // Працює тільки якщо користувач вже дав дозвіл і сесія Google активна
+      this.tokenClient.requestAccessToken({ prompt: 'none' });
     });
   }
 
