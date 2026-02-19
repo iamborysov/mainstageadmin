@@ -26,34 +26,8 @@ export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Ініціалізація Google Identity Services спочатку
-    const initAndRestore = async () => {
-      try {
-        await googleCalendarService.initialize();
-        
-        // Перевіряємо чи сесія вже відновлена (наприклад, App.tsx вже відновив)
-        if (googleCalendarService.isAuthenticated()) {
-          // Просто оновлюємо свій локальний стан, не викликаємо onAuthChange
-          setIsAuthenticated(true);
-          setUser(googleCalendarService.getUser());
-          return;
-        }
-        
-        // Пробуємо відновити сесію з localStorage
-        const restored = googleCalendarService.restoreSession();
-        if (restored) {
-          setIsAuthenticated(true);
-          const user = googleCalendarService.getUser();
-          setUser(user);
-          // Оповіщаємо батьківський компонент про відновлення сесії
-          onAuthChange?.(true, user);
-        }
-      } catch (error) {
-        console.error('Google init error:', error);
-      }
-    };
-    
-    initAndRestore();
+    // Ініціалізація Google Identity Services
+    googleCalendarService.initialize();
     
     // Cleanup timeout on unmount
     return () => {
@@ -61,7 +35,6 @@ export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
         clearTimeout(timeoutRef.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -86,32 +59,22 @@ export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
     }, AUTH_TIMEOUT);
     
     try {
-      // Спочатку пробуємо відновити сесію з localStorage (для expired token)
-      const restored = googleCalendarService.restoreSession();
-      if (restored) {
-        // Є токен в localStorage - оновлюємо UI
-        setIsAuthenticated(true);
-        setUser(googleCalendarService.getUser());
-        onAuthChange?.(true, googleCalendarService.getUser());
-        toast.success('Google Calendar підключено!');
-        setIsLoading(false);
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        return;
+      // Спочатку пробуємо silent refresh (якщо користувач вже підключав Google)
+      const hasToken = googleCalendarService.hasSavedToken();
+      if (hasToken) {
+        const refreshed = await googleCalendarService.refreshToken();
+        if (refreshed) {
+          setIsAuthenticated(true);
+          setUser(googleCalendarService.getUser());
+          setHasError(false);
+          toast.success('Google акаунт оновлено!');
+          setIsLoading(false);
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          return;
+        }
       }
 
-      // Якщо немає в localStorage - пробуємо silent refresh
-      const refreshed = await googleCalendarService.refreshToken();
-      if (refreshed) {
-        setIsAuthenticated(true);
-        setUser(googleCalendarService.getUser());
-        setHasError(false);
-        toast.success('Google акаунт оновлено!');
-        setIsLoading(false);
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        return;
-      }
-
-      // Якщо silent refresh не вдався - повна авторизація
+      // Якщо silent refresh не вдався або немає токена - повна авторизація
       const success = await googleCalendarService.signIn();
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
