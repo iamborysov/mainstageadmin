@@ -179,6 +179,11 @@ class GoogleCalendarService {
     }
     return false;
   }
+
+  // Перевірка чи є збережений токен (навіть якщо він expired)
+  hasSavedToken(): boolean {
+    return !!localStorage.getItem('google_access_token');
+  }
   
   // Перевірка чи токен ще валідний (для фонової перевірки)
   async validateToken(): Promise<boolean> {
@@ -239,8 +244,10 @@ class GoogleCalendarService {
           }
         );
       } else {
-        // Не вдалось оновити - очищаємо сесію
-        this.signOut();
+        // Не вдалось оновити автоматично - залишаємо токен в localStorage
+        // щоб користувач міг натиснути кнопку і оновити без повторного входу
+        // (якщо Google сесія в браузері ще активна)
+        this.accessToken = null; // Тільки в пам'яті, не в localStorage
         throw new Error('Token expired');
       }
     }
