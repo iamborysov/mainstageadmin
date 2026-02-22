@@ -123,6 +123,7 @@ export const updateRoomPrices = (rooms: Room[]) => {
 export const EQUIPMENT: Equipment[] = [
   { id: 'guitar', name: 'Електро-гітара', pricePerHour: 100 },
   { id: 'bass', name: 'Бас-гітара', pricePerHour: 100 },
+  { id: 'keyboard', name: 'Клавіші', pricePerHour: 100 },
   { id: 'cymbals', name: 'Тарілки', pricePerHour: 100 },
   { id: 'cymbal-one', name: 'Тарілка одна', pricePerHour: 50 },
 ];
