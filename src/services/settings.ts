@@ -19,6 +19,22 @@ const defaultSettings: AppSettings = {
   updatedAt: new Date().toISOString(),
 };
 
+// Мержимо обладнання: додаємо нові елементи з EQUIPMENT до збережених
+type EquipmentMap = Record<string, Equipment>;
+
+const mergeEquipment = (saved: Equipment[] = []): Equipment[] => {
+  const savedMap: EquipmentMap = saved.reduce((acc, eq) => {
+    acc[eq.id] = eq;
+    return acc;
+  }, {} as EquipmentMap);
+  
+  // Додаємо нове обладнання з EQUIPMENT, зберігаючи ціни з saved якщо вони є
+  return EQUIPMENT.map(eq => ({
+    ...eq,
+    pricePerHour: savedMap[eq.id]?.pricePerHour ?? eq.pricePerHour,
+  }));
+};
+
 // Завантаження налаштувань з Firebase
 export const loadSettings = async (): Promise<AppSettings> => {
   try {
@@ -27,8 +43,21 @@ export const loadSettings = async (): Promise<AppSettings> => {
     
     if (docSnap.exists()) {
       const settings = docSnap.data() as AppSettings;
-      updateGlobalRoomPrices(settings.rooms);
-      return settings;
+      // Мержимо обладнання щоб додати нові елементи
+      const mergedEquipment = mergeEquipment(settings.equipment);
+      const mergedSettings = {
+        ...settings,
+        equipment: mergedEquipment,
+        rooms: settings.rooms || DEFAULT_ROOMS,
+      };
+      
+      // Якщо з'явилось нове обладнання - оновлюємо в Firebase
+      if (mergedEquipment.length !== (settings.equipment?.length || 0)) {
+        await saveSettings(mergedSettings);
+      }
+      
+      updateGlobalRoomPrices(mergedSettings.rooms);
+      return mergedSettings;
     }
     
     // Якщо налаштувань немає - створюємо з дефолтними значеннями
@@ -41,8 +70,12 @@ export const loadSettings = async (): Promise<AppSettings> => {
     const localSettings = localStorage.getItem('app_settings');
     if (localSettings) {
       const parsed = JSON.parse(localSettings);
+      const mergedEquipment = mergeEquipment(parsed.equipment);
       updateGlobalRoomPrices(parsed.rooms);
-      return parsed;
+      return {
+        ...parsed,
+        equipment: mergedEquipment,
+      };
     }
     return defaultSettings;
   }
@@ -73,8 +106,15 @@ export const subscribeToSettings = (callback: (settings: AppSettings) => void) =
   return onSnapshot(docRef, (docSnap) => {
     if (docSnap.exists()) {
       const settings = docSnap.data() as AppSettings;
-      updateGlobalRoomPrices(settings.rooms);
-      callback(settings);
+      // Мержимо обладнання щоб додати нові елементи
+      const mergedEquipment = mergeEquipment(settings.equipment);
+      const mergedSettings = {
+        ...settings,
+        equipment: mergedEquipment,
+        rooms: settings.rooms || DEFAULT_ROOMS,
+      };
+      updateGlobalRoomPrices(mergedSettings.rooms);
+      callback(mergedSettings);
     } else {
       callback(defaultSettings);
     }
@@ -84,8 +124,12 @@ export const subscribeToSettings = (callback: (settings: AppSettings) => void) =
     const localSettings = localStorage.getItem('app_settings');
     if (localSettings) {
       const parsed = JSON.parse(localSettings);
+      const mergedEquipment = mergeEquipment(parsed.equipment);
       updateGlobalRoomPrices(parsed.rooms);
-      callback(parsed);
+      callback({
+        ...parsed,
+        equipment: mergedEquipment,
+      });
     } else {
       updateGlobalRoomPrices(defaultSettings.rooms);
       callback(defaultSettings);
