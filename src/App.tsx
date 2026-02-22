@@ -9,7 +9,7 @@ const ReportsView = lazy(() => import('@/components/ReportsView').then(m => ({ d
 const Settings = lazy(() => import('@/components/Settings').then(m => ({ default: m.Settings })));
 
 import { GoogleAuthButton } from '@/components/GoogleAuthButton';
-import { googleCalendarService, type GoogleUser } from '@/services/googleCalendar';
+import type { GoogleUser } from '@/services/googleCalendar';
 
 import { AdminAuth } from '@/components/AdminAuth';
 import type { Booking } from '@/types';
@@ -33,14 +33,8 @@ function App() {
   const isOwner = userRole === 'owner';
   const isAdmin = userRole === 'admin' || userRole === 'owner';
   
-  // Перевірка Google сесії при старті (незалежно від GoogleAuthButton)
-  useEffect(() => {
-    const hasSession = googleCalendarService.restoreSession();
-    if (hasSession) {
-      setIsGoogleAuth(true);
-      setGoogleUser(googleCalendarService.getUser());
-    }
-  }, []);
+  // Google авторизація тільки ручна через кнопку
+  // Автоматичне відновлення сесії вимкнено
   
   // Завантаження налаштувань (цін) при старті
   useEffect(() => {

@@ -231,25 +231,11 @@ class GoogleCalendarService {
     );
 
     if (response.status === 401) {
-      // Токен закінчився - пробуємо оновити автоматично
-      const refreshed = await this.refreshToken();
-      if (refreshed) {
-        // Повторюємо запит з новим токеном
-        response = await fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-          {
-            headers: {
-              Authorization: `Bearer ${this.accessToken}`,
-            },
-          }
-        );
-      } else {
-        // Не вдалось оновити автоматично - залишаємо токен в localStorage
-        // щоб користувач міг натиснути кнопку і оновити без повторного входу
-        // (якщо Google сесія в браузері ще активна)
-        this.accessToken = null; // Тільки в пам'яті, не в localStorage
-        throw new Error('Token expired');
-      }
+      // Токен закінчився - тільки ручне оновлення
+      this.accessToken = null;
+      localStorage.removeItem('google_access_token');
+      localStorage.removeItem('google_user');
+      throw new Error('Token expired - manual reconnection required');
     }
 
     if (!response.ok) {

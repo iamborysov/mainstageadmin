@@ -59,22 +59,7 @@ export function GoogleAuthButton({ onAuthChange }: GoogleAuthButtonProps) {
     }, AUTH_TIMEOUT);
     
     try {
-      // Спочатку пробуємо silent refresh (якщо користувач вже підключав Google)
-      const hasToken = googleCalendarService.hasSavedToken();
-      if (hasToken) {
-        const refreshed = await googleCalendarService.refreshToken();
-        if (refreshed) {
-          setIsAuthenticated(true);
-          setUser(googleCalendarService.getUser());
-          setHasError(false);
-          toast.success('Google акаунт оновлено!');
-          setIsLoading(false);
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          return;
-        }
-      }
-
-      // Якщо silent refresh не вдався або немає токена - повна авторизація
+      // Тільки ручне підключення через Google OAuth popup
       const success = await googleCalendarService.signIn();
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
